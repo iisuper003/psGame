@@ -381,6 +381,21 @@ class App {
     }
 
     bindEvents() {
+        // Mobile Menu Toggle
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const navLinks = document.getElementById('navLinks');
+        if (mobileMenuBtn && navLinks) {
+            mobileMenuBtn.addEventListener('click', () => {
+                navLinks.classList.toggle('active');
+            });
+            
+            navLinks.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    navLinks.classList.remove('active');
+                });
+            });
+        }
+
         // Global Navigation
         document.querySelectorAll('.nav-btn, .logo').forEach(btn => {
             btn.addEventListener('click', (e) => {

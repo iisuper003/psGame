@@ -13,11 +13,11 @@
 <body class="theme-dark">
     <header class="app-header">
         <h1 class="logo" id="logoTitle">CharQuiz</h1>
-        <nav class="nav-links">
+        <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
+        <nav class="nav-links" id="navLinks">
             <button class="nav-btn" data-target="home">Home</button>
             <button class="nav-btn" data-target="gallery">Gallery</button>
             <button class="nav-btn" id="randomCharBtn">Surprise Me 🎲</button>
-            <button class="nav-btn" id="openManagerBtn">Manage</button>
             <button class="nav-btn" id="syncBtn" title="Sync Data">Sync 🔃</button>
             <button class="theme-toggle" id="themeToggleBtn" title="Toggle Theme">☀️</button>
         </nav>
@@ -45,6 +45,7 @@
                     <button class="pill" data-filter="Twink">Twink</button>
                     <button class="pill" data-filter="Shemale">Shemale</button>
                 </div>
+                <button class="btn-primary" id="openManagerBtn">Manage Characters ⚙️</button>
             </div>
             <div class="gallery-grid" id="galleryGrid"></div>
         </section>
@@ -138,25 +139,42 @@
                 <button class="modal-close" id="closeManagerModal">&times;</button>
             </div>
             <div class="manager-body">
-                <div class="data-actions">
-                    <button class="btn-secondary" id="exportDataBtn">Export Data (.json)</button>
-                    <label class="btn-secondary import-label">
-                        Import Data
-                        <input type="file" id="importDataInput" accept=".json" hidden>
-                    </label>
+                <div class="manager-section">
+                    <h3>Add New Character</h3>
+                    <form id="addCharacterForm" class="add-form">
+                        <div class="form-group">
+                            <input type="text" id="addName" placeholder="Character Name" required>
+                        </div>
+                        <div class="form-group">
+                            <select id="addCategory" required>
+                                <option value="" disabled selected>Select Category...</option>
+                                <option value="Slut">Slut</option>
+                                <option value="Twink">Twink</option>
+                                <option value="Shemale">Shemale</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <input type="url" id="addUrl" placeholder="Image URL (e.g. https://...)" required>
+                        </div>
+                        <button type="submit" class="btn-primary w-full">Add Character</button>
+                    </form>
+                    
+                    <div class="data-actions-container">
+                        <h3>Data Backup</h3>
+                        <div class="data-actions">
+                            <button class="btn-secondary" id="exportDataBtn">Export (.json)</button>
+                            <label class="btn-secondary import-label">
+                                Import (.json)
+                                <input type="file" id="importDataInput" accept=".json" hidden>
+                            </label>
+                        </div>
+                    </div>
                 </div>
-                <form id="addCharacterForm" class="add-form">
-                    <input type="text" id="addName" placeholder="Name" required>
-                    <select id="addCategory" required>
-                        <option value="" disabled selected>Category...</option>
-                        <option value="Slut">Slut</option>
-                        <option value="Twink">Twink</option>
-                        <option value="Shemale">Shemale</option>
-                    </select>
-                    <input type="url" id="addUrl" placeholder="Image URL" required>
-                    <button type="submit" class="btn-primary">Add</button>
-                </form>
-                <div class="character-list" id="managerCharacterList"></div>
+                
+                <div class="manager-section">
+                    <h3>Character List</h3>
+                    <div class="character-list" id="managerCharacterList"></div>
+                </div>
             </div>
         </div>
     </div>
