@@ -52,7 +52,16 @@ class DataStore {
             body: JSON.stringify(newChar)
         });
         
-        if (!response.ok) throw new Error("Failed to save character to Cloudflare KV");
+        if (!response.ok) {
+            let errorMsg = "Failed to save character to Cloudflare KV";
+            try {
+                const errData = await response.json();
+                if (errData.error) errorMsg += `: ${errData.error}`;
+            } catch (e) {
+                errorMsg += ` (Status: ${response.status})`;
+            }
+            throw new Error(errorMsg);
+        }
         
         const result = await response.json();
         this.characters.push(result.character);
