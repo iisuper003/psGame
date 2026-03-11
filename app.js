@@ -7,7 +7,7 @@ const CATEGORIES = ['Slut', 'Twink', 'Shemale'];
 // --- Data Store ---
 class DataStore {
     constructor() {
-        this.characters = JSON.parse(localStorage.getItem('charquiz_data')) || [];
+        this.characters = [];
         this.highScores = JSON.parse(localStorage.getItem('charquiz_scores')) || {
             All: { score: 0, streak: 0 },
             Slut: { score: 0, streak: 0 },
@@ -16,8 +16,17 @@ class DataStore {
         };
     }
 
-    save() {
-        localStorage.setItem('charquiz_data', JSON.stringify(this.characters));
+    async loadCharacters() {
+        try {
+            const response = await fetch('/api/characters');
+            if (response.ok) {
+                this.characters = await response.json();
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Error fetching characters:', error);
+        }
     }
 
     saveScores() {
@@ -29,25 +38,32 @@ class DataStore {
         return this.characters.filter(c => c.category === category);
     }
 
-    addCharacter(name, category, photoUrl) {
+    async addCharacter(name, category, photoUrl) {
         const normalizedName = name.trim().toLowerCase();
         if (this.characters.some(c => c.name.toLowerCase() === normalizedName)) {
             throw new Error(`Character name "${name}" already exists.`);
         }
-        const newChar = {
-            id: Date.now().toString() + Math.random().toString(36).substring(2),
-            name: name.trim(),
-            category,
-            photoUrl: photoUrl.trim()
-        };
-        this.characters.push(newChar);
-        this.save();
-        return newChar;
+        
+        const newChar = { name: name.trim(), category, photoUrl: photoUrl.trim() };
+        
+        const response = await fetch('/api/characters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newChar)
+        });
+        
+        if (!response.ok) throw new Error("Failed to save character to Cloudflare KV");
+        
+        const result = await response.json();
+        this.characters.push(result.character);
+        return result.character;
     }
 
-    deleteCharacter(id) {
+    async deleteCharacter(id) {
+        const response = await fetch(`/api/characters?id=${id}`, { method: 'DELETE' });
+        
+        if (!response.ok) throw new Error("Failed to delete character from Cloudflare KV");
         this.characters = this.characters.filter(c => c.id !== id);
-        this.save();
     }
 
     updateHighScore(category, score, streak) {
@@ -81,27 +97,36 @@ class DataStore {
 
     importData(file, onComplete, onError) {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const imported = JSON.parse(e.target.result);
                 if (!Array.isArray(imported)) throw new Error("Invalid JSON format");
                 
                 let added = 0;
-                imported.forEach(char => {
+                for (const char of imported) {
                     if (char.name && char.category && char.photoUrl) {
                         const normalizedName = char.name.trim().toLowerCase();
                         if (!this.characters.some(c => c.name.toLowerCase() === normalizedName)) {
-                            this.characters.push({
-                                id: char.id || Date.now().toString() + Math.random().toString(36).substring(2),
-                                name: char.name.trim(),
-                                category: char.category,
-                                photoUrl: char.photoUrl.trim()
+                            // POST to API
+                            const response = await fetch('/api/characters', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    id: char.id || undefined,
+                                    name: char.name.trim(),
+                                    category: char.category,
+                                    photoUrl: char.photoUrl.trim()
+                                })
                             });
-                            added++;
+                            
+                            if (response.ok) {
+                                const result = await response.json();
+                                this.characters.push(result.character);
+                                added++;
+                            }
                         }
                     }
-                });
-                this.save();
+                }
                 onComplete(added);
             } catch (err) {
                 onError(err);
@@ -322,8 +347,17 @@ class App {
         this.initDOM();
         this.bindEvents();
         this.applyTheme(this.theme);
-        this.renderHome();
         Confetti.init();
+        
+        // Start Initialization flow
+        this.initData();
+    }
+
+    async initData() {
+        this.showToast('Connecting to KV database... ⏳', 'success');
+        await this.store.loadCharacters();
+        this.renderHome();
+        this.showToast('Online Data Sync Complete! ✅', 'success');
     }
 
     initDOM() {
@@ -671,29 +705,42 @@ class App {
 
     // --- Action Handlers ---
 
-    handleAddCharacter(e) {
+    async handleAddCharacter(e) {
         e.preventDefault();
         const name = document.getElementById('addName').value;
         const category = document.getElementById('addCategory').value;
         const url = document.getElementById('addUrl').value;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
         
         try {
-            this.store.addCharacter(name, category, url);
+            await this.store.addCharacter(name, category, url);
             this.renderManagerList();
             this.renderHome();
-            this.showToast('Character added successfully!');
+            this.showToast('Character saved to KV safely!');
             e.target.reset();
         } catch (err) {
             this.showToast(err.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
         }
     }
 
-    handleDeleteCharacter(id) {
-        if (confirm('Are you sure you want to delete this character?')) {
-            this.store.deleteCharacter(id);
-            this.renderManagerList();
-            this.renderHome();
-            this.showToast('Character deleted.');
+    async handleDeleteCharacter(id) {
+        if (confirm('Are you sure you want to permanently delete this character from the KV database?')) {
+            try {
+                this.showToast('Deleting character... ⏳');
+                await this.store.deleteCharacter(id);
+                this.renderManagerList();
+                this.renderHome();
+                this.showToast('Character deleted safely from KV.');
+            } catch (err) {
+                this.showToast(err.message, 'error');
+            }
         }
     }
 
@@ -701,13 +748,15 @@ class App {
         const file = e.target.files[0];
         if (!file) return;
         
+        this.showToast('Importing to KV database... please wait.', 'success');
+        
         this.store.importData(file, (count) => {
             this.renderManagerList();
             this.renderHome();
-            this.showToast(`Imported ${count} new characters!`);
+            this.showToast(`Successfully uploaded ${count} new characters to Cloudflare KV!`);
             e.target.value = ''; // reset
         }, (err) => {
-            this.showToast('Failed to import JSON file.', 'error');
+            this.showToast(`Import failed: ${err.message}`, 'error');
             e.target.value = '';
         });
     }
