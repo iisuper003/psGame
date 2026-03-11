@@ -388,6 +388,19 @@ class App {
             });
         });
 
+        // Sync Data Action
+        const syncBtn = document.getElementById('syncBtn');
+        if (syncBtn) {
+            syncBtn.addEventListener('click', async () => {
+                const origText = syncBtn.textContent;
+                syncBtn.textContent = 'Syncing...';
+                syncBtn.disabled = true;
+                await this.initData();
+                syncBtn.textContent = origText;
+                syncBtn.disabled = false;
+            });
+        }
+
         // Theme Toggle
         document.getElementById('themeToggleBtn').addEventListener('click', () => {
             this.theme = this.theme === 'dark' ? 'light' : 'dark';
