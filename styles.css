@@ -387,7 +387,7 @@ input:focus, select:focus {
     overflow: hidden;
     cursor: pointer;
     position: relative;
-    aspect-ratio: 3/4;
+    aspect-ratio: 9/16;
     box-shadow: var(--shadow-md);
 }
 
@@ -475,7 +475,7 @@ input:focus, select:focus {
 .image-frame {
     width: 100%;
     max-width: 400px;
-    aspect-ratio: 1;
+    aspect-ratio: 9/16;
     padding: 1rem;
     display: flex;
     align-items: center;
