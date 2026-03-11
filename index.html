@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Quiz Game</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="theme-dark">
+    <!-- Header -->
+    <header class="app-header">
+        <h1 class="logo" id="logoTitle">CharQuiz</h1>
+        <nav class="nav-links">
+            <button class="nav-btn" data-target="home">Home</button>
+            <button class="nav-btn" data-target="gallery">Gallery</button>
+            <button class="nav-btn" id="openManagerBtn">Manage</button>
+            <button class="theme-toggle" id="themeToggleBtn">☀️</button>
+        </nav>
+    </header>
+
+    <!-- Main Container -->
+    <main id="appContainer">
+        <!-- Home Screen -->
+        <section id="screen-home" class="screen active">
+            <div class="hero">
+                <h2>Select a Category</h2>
+            </div>
+            <div class="category-grid" id="homeCategoryGrid">
+                <!-- Dynamite cards inserted here -->
+            </div>
+        </section>
+
+        <!-- Gallery Screen -->
+        <section id="screen-gallery" class="screen hidden">
+            <div class="gallery-controls">
+                <input type="text" id="gallerySearch" placeholder="Search characters...">
+                <div class="filter-pills" id="galleryFilters">
+                    <button class="pill active" data-filter="All">All</button>
+                    <button class="pill" data-filter="Slut">Slut</button>
+                    <button class="pill" data-filter="Twink">Twink</button>
+                    <button class="pill" data-filter="Shemale">Shemale</button>
+                </div>
+            </div>
+            <div class="gallery-grid" id="galleryGrid"></div>
+        </section>
+
+        <!-- Game Config Screen / Modal -->
+        <section id="screen-config" class="screen hidden">
+            <div class="config-container glass-card">
+                <h2 id="configCategoryTitle">Category Mode</h2>
+                <div class="config-options">
+                    <h3>Select Rounds</h3>
+                    <div class="rounds-selector" id="roundsSelector">
+                        <label><input type="radio" name="rounds" value="10" checked><span>10</span></label>
+                        <label><input type="radio" name="rounds" value="15"><span>15</span></label>
+                        <label><input type="radio" name="rounds" value="20"><span>20</span></label>
+                        <label><input type="radio" name="rounds" value="25"><span>25</span></label>
+                        <label><input type="radio" name="rounds" value="Infinite"><span>Infinite</span></label>
+                    </div>
+                </div>
+                <button class="btn-primary" id="startGameBtn">Start Game</button>
+            </div>
+        </section>
+
+        <!-- Game Screen -->
+        <section id="screen-game" class="screen hidden">
+            <div class="game-topbar">
+                <div class="progress-bar"><div id="gameProgressFill"></div></div>
+                <div class="stats">
+                    <span class="stat-round">Round <span id="currentRound">1</span></span>
+                    <span class="stat-streak">Streak <span id="currentStreak">0</span></span>
+                </div>
+            </div>
+            <div class="game-area">
+                <div class="image-frame glass-card">
+                    <img id="gameImage" src="" alt="Character">
+                </div>
+                <div class="options-grid" id="gameOptions"></div>
+            </div>
+        </section>
+
+        <!-- Results Screen -->
+        <section id="screen-results" class="screen hidden">
+            <div class="results-card glass-card">
+                <h2>Quiz Complete</h2>
+                <div class="metrics">
+                    <div class="metric"><span>Score</span><strong id="finalScore">0</strong></div>
+                    <div class="metric"><span>Max Streak</span><strong id="maxStreak">0</strong></div>
+                    <div class="metric highlight"><span>All-Time High</span><strong id="highScore">0</strong></div>
+                </div>
+                <div class="mistakes-review">
+                    <h3>Review Mistakes</h3>
+                    <div id="mistakesList"></div>
+                </div>
+                <button class="btn-primary" id="playAgainBtn">Play Again</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modals -->
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal hidden">
+        <div class="modal-backdrop" id="imageModalBackdrop"></div>
+        <div class="modal-content image-modal-content">
+            <img id="globalModalImage" src="" alt="Full Resolution">
+            <button class="modal-close" id="closeImageModal">&times;</button>
+        </div>
+    </div>
+
+    <!-- Manager Modal -->
+    <div id="managerModal" class="modal hidden">
+        <div class="modal-backdrop" id="managerModalBackdrop"></div>
+        <div class="modal-content manager-modal-content glass-card">
+            <div class="modal-header">
+                <h2>Manage Characters</h2>
+                <button class="modal-close" id="closeManagerModal">&times;</button>
+            </div>
+            <div class="manager-body">
+                <div class="data-actions">
+                    <button class="btn-secondary" id="exportDataBtn">Export Data (.json)</button>
+                    <label class="btn-secondary import-label">
+                        Import Data
+                        <input type="file" id="importDataInput" accept=".json" hidden>
+                    </label>
+                </div>
+                <form id="addCharacterForm" class="add-form">
+                    <input type="text" id="addName" placeholder="Name" required>
+                    <select id="addCategory" required>
+                        <option value="" disabled selected>Category...</option>
+                        <option value="Slut">Slut</option>
+                        <option value="Twink">Twink</option>
+                        <option value="Shemale">Shemale</option>
+                    </select>
+                    <input type="url" id="addUrl" placeholder="Image URL" required>
+                    <button type="submit" class="btn-primary">Add</button>
+                </form>
+                <div class="character-list" id="managerCharacterList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+    <!-- Confetti Canvas -->
+    <canvas id="confettiCanvas" class="hidden"></canvas>
+
+    <script src="app.js"></script>
+</body>
+</html>
