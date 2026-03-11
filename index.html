@@ -16,6 +16,7 @@
         <nav class="nav-links">
             <button class="nav-btn" data-target="home">Home</button>
             <button class="nav-btn" data-target="gallery">Gallery</button>
+            <button class="nav-btn" id="randomCharBtn">Surprise Me 🎲</button>
             <button class="nav-btn" id="openManagerBtn">Manage</button>
             <button class="nav-btn" id="syncBtn" title="Sync Data">Sync 🔃</button>
             <button class="theme-toggle" id="themeToggleBtn" title="Toggle Theme">☀️</button>
@@ -108,6 +109,23 @@
         <div class="modal-content image-modal-content">
             <img id="globalModalImage" src="" alt="Full Resolution">
             <button class="modal-close" id="closeImageModal">&times;</button>
+        </div>
+    </div>
+
+    <!-- Random Character Modal -->
+    <div id="randomModal" class="modal hidden">
+        <div class="modal-backdrop" id="randomModalBackdrop"></div>
+        <div class="modal-content glass-card" style="text-align: center; max-width: 400px; padding: 2rem;">
+            <button class="modal-close" id="closeRandomModal" style="position: absolute; right: 1rem; top: 1rem;">&times;</button>
+            <h2 style="margin-bottom: 1rem; color: var(--primary);">Random Match!</h2>
+            <div class="char-item" style="cursor: default; pointer-events: none; margin: 0 auto 1.5rem auto; max-width: 250px;">
+                <img id="randomModalImage" src="" alt="Random Character">
+                <div class="char-item-info">
+                    <strong id="randomModalName">Name</strong>
+                    <span id="randomModalCategory">Category</span>
+                </div>
+            </div>
+            <button class="btn-primary w-full" id="randomCharRollBtn" style="width: 100%;">Roll Again 🎲</button>
         </div>
     </div>
 

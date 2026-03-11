@@ -373,7 +373,8 @@ class App {
         // Modals
         this.modals = {
             manager: document.getElementById('managerModal'),
-            image: document.getElementById('imageModal')
+            image: document.getElementById('imageModal'),
+            random: document.getElementById('randomModal')
         };
         
         this.toastContainer = document.getElementById('toastContainer');
@@ -412,13 +413,35 @@ class App {
         document.body.addEventListener('click', (e) => {
             if (e.target.tagName === 'IMG' && 
                 !e.target.closest('#managerCharacterList') && 
-                !e.target.closest('.mistake-item')) {
+                !e.target.closest('.mistake-item') &&
+                e.target.id !== 'randomModalImage') {
                 // Ensure it has a src
                 if (e.target.src) this.openImageModal(e.target.src);
             }
         });
         document.getElementById('closeImageModal').addEventListener('click', () => this.closeModal('image'));
         document.getElementById('imageModalBackdrop').addEventListener('click', () => this.closeModal('image'));
+
+        // Random Character Modal
+        const handleRandomRoll = () => {
+            const allChars = this.store.getCharacters();
+            if (allChars.length === 0) {
+                this.showToast('No characters available. Add some first!', 'error');
+                return;
+            }
+            const randomChar = allChars[Math.floor(Math.random() * allChars.length)];
+            document.getElementById('randomModalImage').src = randomChar.photoUrl;
+            document.getElementById('randomModalName').textContent = randomChar.name;
+            document.getElementById('randomModalCategory').textContent = randomChar.category;
+            this.openModal('random');
+        };
+
+        const randomBtn = document.getElementById('randomCharBtn');
+        if (randomBtn) randomBtn.addEventListener('click', handleRandomRoll);
+        
+        document.getElementById('randomCharRollBtn').addEventListener('click', handleRandomRoll);
+        document.getElementById('closeRandomModal').addEventListener('click', () => this.closeModal('random'));
+        document.getElementById('randomModalBackdrop').addEventListener('click', () => this.closeModal('random'));
 
         // Manager Modal
         document.getElementById('openManagerBtn').addEventListener('click', () => {
