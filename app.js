@@ -709,9 +709,11 @@ class App {
                 if (val > maxAvailable) {
                     input.disabled = true;
                     input.parentElement.style.opacity = '0.5';
+                    input.parentElement.style.pointerEvents = 'none';
                 } else {
                     input.disabled = false;
                     input.parentElement.style.opacity = '1';
+                    input.parentElement.style.pointerEvents = 'auto';
                 }
             }
         });
