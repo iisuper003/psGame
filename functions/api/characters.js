@@ -1,9 +1,9 @@
 export async function onRequest(context) {
     const { request, env } = context;
-    const kv = env.PSBASE;
+    const kv = env.KV;
     
     if (!kv) {
-        return new Response(JSON.stringify({ error: "KV binding 'PSBASE' is not configured. Please bind it in your Cloudflare dashboard or use --kv PSBASE locally." }), {
+        return new Response(JSON.stringify({ error: "KV binding 'KV' is not configured. Please bind it in your Cloudflare dashboard." }), {
             status: 500,
             headers: { "Content-Type": "application/json" }
         });
