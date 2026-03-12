@@ -78,6 +78,28 @@ export async function onRequest(context) {
                 headers: { "Content-Type": "application/json" }
             });
         }
+        
+        if (request.method === "PUT") {
+            const updateData = await request.json();
+            if (!updateData.id) {
+                return new Response(JSON.stringify({ error: "Missing character ID for update" }), { status: 400 });
+            }
+            
+            const data = (await kv.get(key, { type: "json" })) || [];
+            const charIndex = data.findIndex(c => c.id === updateData.id);
+            
+            if (charIndex === -1) {
+                return new Response(JSON.stringify({ error: "Character not found" }), { status: 404 });
+            }
+            
+            data[charIndex] = { ...data[charIndex], ...updateData };
+            await kv.put(key, JSON.stringify(data));
+            
+            return new Response(JSON.stringify({ message: "Character updated successfully", character: data[charIndex] }), {
+                status: 200,
+                headers: { "Content-Type": "application/json" }
+            });
+        }
 
         // Method Not Allowed
         return new Response(JSON.stringify({ error: "Method not allowed" }), {

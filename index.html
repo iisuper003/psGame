@@ -17,8 +17,8 @@
         <nav class="nav-links" id="navLinks">
             <button class="nav-btn" data-target="home">Home</button>
             <button class="nav-btn" data-target="gallery">Gallery</button>
-            <button class="nav-btn" id="randomCharBtn">Surprise Me 🎲</button>
-            <button class="nav-btn" id="syncBtn" title="Sync Data">Sync 🔃</button>
+            <button class="nav-btn" id="randomCharBtn">Surprise Me</button>
+            <button class="nav-btn" id="syncBtn" title="Sync Data">Sync</button>
             <button class="theme-toggle" id="themeToggleBtn" title="Toggle Theme">☀️</button>
         </nav>
     </header>
@@ -45,7 +45,7 @@
                     <button class="pill" data-filter="Twink">Twink</button>
                     <button class="pill" data-filter="Shemale">Shemale</button>
                 </div>
-                <button class="btn-primary" id="openManagerBtn">Manage Characters ⚙️</button>
+                <button class="btn-primary" id="openManagerBtn">Add Character</button>
             </div>
             <div class="gallery-grid" id="galleryGrid"></div>
         </section>
@@ -130,17 +130,16 @@
         </div>
     </div>
 
-    <!-- Manager Modal -->
+    <!-- Manager Modal (Add / Import) -->
     <div id="managerModal" class="modal hidden">
         <div class="modal-backdrop" id="managerModalBackdrop"></div>
-        <div class="modal-content manager-modal-content glass-card">
+        <div class="modal-content glass-card" style="max-width: 500px;">
             <div class="modal-header">
-                <h2>Manage Characters</h2>
+                <h2>Add Character</h2>
                 <button class="modal-close" id="closeManagerModal">&times;</button>
             </div>
-            <div class="manager-body">
+            <div class="manager-body" style="grid-template-columns: 1fr;">
                 <div class="manager-section">
-                    <h3>Add New Character</h3>
                     <form id="addCharacterForm" class="add-form">
                         <div class="form-group">
                             <input type="text" id="addName" placeholder="Character Name" required>
@@ -159,22 +158,47 @@
                         <button type="submit" class="btn-primary w-full">Add Character</button>
                     </form>
                     
-                    <div class="data-actions-container">
-                        <h3>Data Backup</h3>
+                    <div class="data-actions-container" style="margin-top: 2rem;">
+                        <h3 style="font-size: 1rem; color: var(--text-muted); padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-glass); margin-bottom: 1rem;">Data Backup</h3>
                         <div class="data-actions">
-                            <button class="btn-secondary" id="exportDataBtn">Export (.json)</button>
+                            <button class="btn-secondary" id="exportDataBtn">Export JSON</button>
                             <label class="btn-secondary import-label">
-                                Import (.json)
+                                Import JSON
                                 <input type="file" id="importDataInput" accept=".json" hidden>
                             </label>
                         </div>
                     </div>
                 </div>
-                
-                <div class="manager-section">
-                    <h3>Character List</h3>
-                    <div class="character-list" id="managerCharacterList"></div>
-                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Character Modal -->
+    <div id="editModal" class="modal hidden">
+        <div class="modal-backdrop" id="editModalBackdrop"></div>
+        <div class="modal-content glass-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Edit Character</h2>
+                <button class="modal-close" id="closeEditModal">&times;</button>
+            </div>
+            <div class="manager-body" style="grid-template-columns: 1fr;">
+                <form id="editCharacterForm" class="add-form">
+                    <input type="hidden" id="editId">
+                    <div class="form-group">
+                        <input type="text" id="editName" placeholder="Character Name" required>
+                    </div>
+                    <div class="form-group">
+                        <select id="editCategory" required>
+                            <option value="Slut">Slut</option>
+                            <option value="Twink">Twink</option>
+                            <option value="Shemale">Shemale</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="url" id="editUrl" placeholder="Image URL (e.g. https://...)" required>
+                    </div>
+                    <button type="submit" class="btn-primary w-full" style="background: var(--success);">Save Changes</button>
+                </form>
             </div>
         </div>
     </div>

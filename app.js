@@ -4,6 +4,14 @@
 
 const CATEGORIES = ['Slut', 'Twink', 'Shemale'];
 
+// --- Helpers ---
+function getProxiedUrl(url) {
+    if (!url) return '';
+    // If it's already a relative path, local blob, or placeholder, return as is
+    if (url.startsWith('/') || url.startsWith('data:') || url.startsWith('blob:') || url.includes('via.placeholder.com')) return url;
+    return `/api/proxy?url=${encodeURIComponent(url)}`;
+}
+
 // --- Data Store ---
 class DataStore {
     constructor() {
@@ -39,11 +47,6 @@ class DataStore {
     }
 
     async addCharacter(name, category, photoUrl) {
-        const normalizedName = name.trim().toLowerCase();
-        if (this.characters.some(c => c.name.toLowerCase() === normalizedName)) {
-            throw new Error(`Character name "${name}" already exists.`);
-        }
-        
         const newChar = { name: name.trim(), category, photoUrl: photoUrl.trim() };
         
         const response = await fetch('/api/characters', {
@@ -65,6 +68,33 @@ class DataStore {
         
         const result = await response.json();
         this.characters.push(result.character);
+        return result.character;
+    }
+
+    async updateCharacter(id, name, category, photoUrl) {
+        const updateData = { id, name: name.trim(), category, photoUrl: photoUrl.trim() };
+        const response = await fetch('/api/characters', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+
+        if (!response.ok) {
+            let errorMsg = "Failed to update character";
+            try {
+                const errData = await response.json();
+                if (errData.error) errorMsg += `: ${errData.error}`;
+            } catch (e) {
+                errorMsg += ` (Status: ${response.status})`;
+            }
+            throw new Error(errorMsg);
+        }
+
+        const result = await response.json();
+        const index = this.characters.findIndex(c => c.id === id);
+        if (index !== -1) {
+            this.characters[index] = result.character;
+        }
         return result.character;
     }
 
@@ -382,6 +412,7 @@ class App {
         // Modals
         this.modals = {
             manager: document.getElementById('managerModal'),
+            edit: document.getElementById('editModal'),
             image: document.getElementById('imageModal'),
             random: document.getElementById('randomModal')
         };
@@ -454,7 +485,7 @@ class App {
                 return;
             }
             const randomChar = allChars[Math.floor(Math.random() * allChars.length)];
-            document.getElementById('randomModalImage').src = randomChar.photoUrl;
+            document.getElementById('randomModalImage').src = getProxiedUrl(randomChar.photoUrl);
             document.getElementById('randomModalName').textContent = randomChar.name;
             document.getElementById('randomModalCategory').textContent = randomChar.category;
             this.openModal('random');
@@ -469,14 +500,18 @@ class App {
 
         // Manager Modal
         document.getElementById('openManagerBtn').addEventListener('click', () => {
-            this.renderManagerList();
             this.openModal('manager');
         });
         document.getElementById('closeManagerModal').addEventListener('click', () => this.closeModal('manager'));
         document.getElementById('managerModalBackdrop').addEventListener('click', () => this.closeModal('manager'));
 
+        // Edit Modal
+        document.getElementById('closeEditModal').addEventListener('click', () => this.closeModal('edit'));
+        document.getElementById('editModalBackdrop').addEventListener('click', () => this.closeModal('edit'));
+
         // CRUD Actions
         document.getElementById('addCharacterForm').addEventListener('submit', (e) => this.handleAddCharacter(e));
+        document.getElementById('editCharacterForm').addEventListener('submit', (e) => this.handleEditCharacter(e));
         document.getElementById('exportDataBtn').addEventListener('click', () => this.store.exportData());
         document.getElementById('importDataInput').addEventListener('change', (e) => this.handleImportData(e));
 
@@ -584,8 +619,8 @@ class App {
             const chars = this.store.getCharacters(cat);
             let bgUrl = '';
             if (chars.length > 0) {
-                // Pick random bg
-                bgUrl = chars[Math.floor(Math.random() * chars.length)].photoUrl;
+                // Pick random bg and proxy it
+                bgUrl = getProxiedUrl(chars[Math.floor(Math.random() * chars.length)].photoUrl);
             } else {
                 bgUrl = 'https://via.placeholder.com/300x400/222/555?text=' + cat;
             }
@@ -621,7 +656,11 @@ class App {
             const item = document.createElement('div');
             item.className = 'char-item';
             item.innerHTML = `
-                <img src="${c.photoUrl}" loading="lazy" alt="${c.name}">
+                <img src="${getProxiedUrl(c.photoUrl)}" loading="lazy" alt="${c.name}">
+                <div class="char-item-actions">
+                    <button class="char-action-btn edit" onclick="app.openEditModal('${c.id}', event)" title="Edit">✏️</button>
+                    <button class="char-action-btn delete" onclick="app.handleDeleteCharacter('${c.id}', event)" title="Delete">🗑️</button>
+                </div>
                 <div class="char-item-info">
                     <strong>${c.name}</strong>
                     <span>${c.category}</span>
@@ -631,28 +670,17 @@ class App {
         });
     }
 
-    renderManagerList() {
-        const list = document.getElementById('managerCharacterList');
-        list.innerHTML = '';
-        
-        const chars = this.store.getCharacters();
-        chars.forEach(c => {
-            const item = document.createElement('div');
-            item.className = 'manager-item';
-            item.innerHTML = `
-                <div class="manager-item-info">
-                    <img src="${c.photoUrl}" alt="${c.name}">
-                    <div>
-                        <strong>${c.name}</strong>
-                        <div style="font-size:0.8rem; color:var(--text-muted)">${c.category}</div>
-                    </div>
-                </div>
-                <div class="manager-item-actions">
-                    <button onclick="app.handleDeleteCharacter('${c.id}')">Delete</button>
-                </div>
-            `;
-            list.appendChild(item);
-        });
+    openEditModal(id, e) {
+        if (e) e.stopPropagation();
+        const char = this.store.getCharacters().find(c => c.id === id);
+        if (!char) return;
+
+        document.getElementById('editId').value = char.id;
+        document.getElementById('editName').value = char.name;
+        document.getElementById('editCategory').value = char.category;
+        document.getElementById('editUrl').value = char.photoUrl;
+
+        this.openModal('edit');
     }
 
     openGameConfig(category) {
@@ -681,9 +709,14 @@ class App {
             }
         });
         
-        // Auto select highest possible valid option or infinite
-        const firstValid = document.querySelector('input[name="rounds"]:not(:disabled)');
-        if (firstValid) firstValid.checked = true;
+        // Auto select a logical default option
+        const tenOption = document.querySelector('input[name="rounds"][value="10"]');
+        if (tenOption && !tenOption.disabled) {
+            tenOption.checked = true;
+        } else {
+            const firstValid = document.querySelector('input[name="rounds"]:not(:disabled)');
+            if (firstValid) firstValid.checked = true;
+        }
 
         this.navigate('config');
     }
@@ -700,7 +733,7 @@ class App {
         document.getElementById('gameProgressFill').style.width = `${progress}%`;
         
         const img = document.getElementById('gameImage');
-        img.src = state.currentQuestion.correct.photoUrl;
+        img.src = getProxiedUrl(state.currentQuestion.correct.photoUrl);
         
         const optsContainer = document.getElementById('gameOptions');
         optsContainer.innerHTML = '';
@@ -752,7 +785,7 @@ class App {
                 const item = document.createElement('div');
                 item.className = 'mistake-item';
                 item.innerHTML = `
-                    <img src="${m.image}" alt="Character">
+                    <img src="${getProxiedUrl(m.image)}" alt="Character">
                     <div class="mistake-info">
                         <span class="wrong">${m.wrongName}</span>
                         <span class="right">${m.correctName}</span>
@@ -778,8 +811,9 @@ class App {
         
         try {
             await this.store.addCharacter(name, category, url);
-            this.renderManagerList();
+            this.renderGallery();
             this.renderHome();
+            this.closeModal('manager');
             this.showToast('Character saved to KV safely!');
             e.target.reset();
         } catch (err) {
@@ -790,12 +824,40 @@ class App {
         }
     }
 
-    async handleDeleteCharacter(id) {
+    async handleEditCharacter(e) {
+        e.preventDefault();
+        const id = document.getElementById('editId').value;
+        const name = document.getElementById('editName').value;
+        const category = document.getElementById('editCategory').value;
+        const url = document.getElementById('editUrl').value;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+        
+        try {
+            await this.store.updateCharacter(id, name, category, url);
+            this.renderGallery();
+            this.renderHome();
+            this.closeModal('edit');
+            this.showToast('Character updated successfully!');
+            e.target.reset();
+        } catch (err) {
+            this.showToast(err.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
+    }
+
+    async handleDeleteCharacter(id, e) {
+        if (e) e.stopPropagation();
         if (confirm('Are you sure you want to permanently delete this character from the KV database?')) {
             try {
                 this.showToast('Deleting character... ⏳');
                 await this.store.deleteCharacter(id);
-                this.renderManagerList();
+                this.renderGallery();
                 this.renderHome();
                 this.showToast('Character deleted safely from KV.');
             } catch (err) {
@@ -811,7 +873,7 @@ class App {
         this.showToast('Importing to KV database... please wait.', 'success');
         
         this.store.importData(file, (count) => {
-            this.renderManagerList();
+            this.renderGallery();
             this.renderHome();
             this.showToast(`Successfully uploaded ${count} new characters to Cloudflare KV!`);
             e.target.value = ''; // reset

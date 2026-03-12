@@ -18,6 +18,9 @@
     --overlay: rgba(0, 0, 0, 0.5);
     --font-heading: 'Outfit', sans-serif;
     --font-body: 'Outfit', sans-serif;
+    --border-radius: 24px;
+    --gradient-primary: linear-gradient(135deg, #6366f1, #a855f7);
+    --gradient-card: linear-gradient(135deg, #f3f4f6, #e5e7eb);
 }
 
 body.theme-dark {
@@ -34,6 +37,8 @@ body.theme-dark {
     --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
     --border-glass: rgba(255, 255, 255, 0.1);
     --overlay: rgba(0, 0, 0, 0.8);
+    --gradient-primary: linear-gradient(135deg, #818cf8, #a855f7);
+    --gradient-card: linear-gradient(135deg, rgba(30, 41, 59, 1), rgba(15, 23, 42, 1));
 }
 
 /* =================== RESET & GLOBAL =================== */
@@ -178,7 +183,7 @@ body.theme-dark .nav-links {
 .hero h2 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--primary), #a855f7);
+    background: var(--gradient-primary);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -195,9 +200,10 @@ body.theme-dark .nav-links {
     position: relative;
     border-radius: var(--border-radius);
     overflow: hidden;
-    height: 300px;
+    height: 320px;
     cursor: pointer;
     box-shadow: var(--shadow-md);
+    background: var(--gradient-card);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -209,13 +215,14 @@ body.theme-dark .nav-links {
 .card-bg {
     position: absolute;
     inset: 0;
-    background-size: cover;
-    background-position: center;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center bottom;
     transition: transform 0.5s ease;
 }
 
 .category-card:hover .card-bg {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .card-overlay {
@@ -234,20 +241,21 @@ body.theme-dark .nav-links {
 
 /* =================== BUTTONS & INPUTS =================== */
 .btn-primary {
-    background: var(--primary);
+    background: var(--gradient-primary);
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
+    background-size: 200% auto;
 }
 .btn-primary:hover {
-    background: var(--primary-hover);
+    background-position: right center;
     transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
 }
 
 .btn-secondary {
@@ -383,13 +391,14 @@ input:focus, select:focus {
     background: var(--bg-glass);
     color: var(--text-main);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .pill.active, .pill:hover {
-    background: var(--primary);
+    background: var(--gradient-primary);
     color: white;
-    border-color: var(--primary);
+    border-color: transparent;
+    box-shadow: var(--shadow-sm);
 }
 
 .gallery-grid {
@@ -426,6 +435,43 @@ input:focus, select:focus {
 }
 .char-item-info strong { display: block; font-size: 1rem; }
 .char-item-info span { font-size: 0.8rem; opacity: 0.8; }
+
+.char-item-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.char-item:hover .char-item-actions {
+    opacity: 1;
+}
+
+.char-action-btn {
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    color: white;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+}
+
+.char-action-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.char-action-btn.edit:hover { background: var(--success); border-color: var(--success); }
+.char-action-btn.delete:hover { background: var(--danger); border-color: var(--danger); }
 
 /* =================== GAME CONFIG =================== */
 .config-container { padding: 3rem; text-align: center; max-width: 500px; margin: 4rem auto; }
@@ -467,7 +513,7 @@ input:focus, select:focus {
 
 #gameProgressFill {
     height: 100%;
-    background: var(--primary);
+    background: var(--gradient-primary);
     width: 0%;
     transition: width 0.3s ease;
 }
@@ -483,12 +529,16 @@ input:focus, select:focus {
 
 .game-area {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 2rem;
+    justify-content: center;
+    gap: 3rem;
+    max-width: 900px;
+    margin: 0 auto;
 }
 
 .image-frame {
+    flex: 1;
     width: 100%;
     max-width: 400px;
     aspect-ratio: 9/16;
@@ -508,6 +558,7 @@ input:focus, select:focus {
 }
 
 .options-grid {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -772,4 +823,5 @@ input:focus, select:focus {
     .gallery-controls { flex-direction: column; align-items: stretch; }
     #gallerySearch { max-width: 100%; }
     .filter-pills { flex-wrap: wrap; justify-content: center; }
+    .game-area { flex-direction: column; gap: 2rem; }
 }
