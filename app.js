@@ -500,6 +500,13 @@ class App {
 
         // Manager Modal
         document.getElementById('openManagerBtn').addEventListener('click', () => {
+            const lastCategory = localStorage.getItem('charquiz_last_category');
+            if (lastCategory) {
+                const addCategorySelect = document.getElementById('addCategory');
+                if ([...addCategorySelect.options].some(opt => opt.value === lastCategory)) {
+                    addCategorySelect.value = lastCategory;
+                }
+            }
             this.openModal('manager');
         });
         document.getElementById('closeManagerModal').addEventListener('click', () => this.closeModal('manager'));
@@ -809,6 +816,9 @@ class App {
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
         
+        // Remember selection
+        if (category) localStorage.setItem('charquiz_last_category', category);
+        
         try {
             await this.store.addCharacter(name, category, url);
             this.renderGallery();
@@ -835,6 +845,9 @@ class App {
         
         submitBtn.disabled = true;
         submitBtn.textContent = 'Saving...';
+        
+        // Remember selection
+        if (category) localStorage.setItem('charquiz_last_category', category);
         
         try {
             await this.store.updateCharacter(id, name, category, url);
