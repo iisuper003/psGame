@@ -176,12 +176,15 @@ body.theme-dark .nav-links {
 /* =================== HOME SCREEN =================== */
 
 .category-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 2rem;
 }
 
 .category-card {
+    flex: 1 1 250px;
+    max-width: 350px;
     position: relative;
     border-radius: var(--border-radius);
     overflow: hidden;
@@ -200,7 +203,7 @@ body.theme-dark .nav-links {
 .card-bg {
     position: absolute;
     inset: 0;
-    background-size: contain;
+    background-size: cover;
     background-repeat: no-repeat;
     background-position: center bottom;
     transition: transform 0.5s ease;
