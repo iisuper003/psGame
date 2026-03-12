@@ -8,7 +8,7 @@ const CATEGORIES = ['Slut', 'Twink', 'Shemale'];
 function getProxiedUrl(url) {
     if (!url) return '';
     // If it's already a relative path, local blob, or placeholder, return as is
-    if (url.startsWith('/') || url.startsWith('data:') || url.startsWith('blob:') || url.includes('via.placeholder.com')) return url;
+    if (url.startsWith('/') || url.startsWith('data:') || url.startsWith('blob:') || url.includes('via.placeholder.com') || url.includes('unsplash.com')) return url;
     return `/api/proxy?url=${encodeURIComponent(url)}`;
 }
 
@@ -22,6 +22,26 @@ class DataStore {
             Twink: { score: 0, streak: 0 },
             Shemale: { score: 0, streak: 0 }
         };
+        this.customLabels = JSON.parse(localStorage.getItem('charquiz_custom_labels')) || ['milf', 'teen', 'legend'];
+    }
+
+    saveLabels() {
+        localStorage.setItem('charquiz_custom_labels', JSON.stringify(this.customLabels));
+    }
+
+    addLabel(label) {
+        const clean = label.trim().toLowerCase();
+        if (clean && !this.customLabels.includes(clean)) {
+            this.customLabels.push(clean);
+            this.saveLabels();
+            return true;
+        }
+        return false;
+    }
+
+    deleteLabel(label) {
+        this.customLabels = this.customLabels.filter(l => l !== label);
+        this.saveLabels();
     }
 
     async loadCharacters() {
@@ -29,11 +49,34 @@ class DataStore {
             const response = await fetch('/api/characters');
             if (response.ok) {
                 this.characters = await response.json();
+                
+                // If API returns an empty array (no data in KV), load dummy
+                if (Array.isArray(this.characters) && this.characters.length === 0) {
+                    const dummyScript = document.getElementById('dummy-characters');
+                    if (dummyScript) {
+                        try {
+                            this.characters = JSON.parse(dummyScript.textContent);
+                            console.log('Loaded dummy characters (KV is empty)');
+                        } catch (e) {
+                            console.error('Failed to load dummy data fallback:', e);
+                        }
+                    }
+                }
             } else {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
         } catch (error) {
             console.error('Error fetching characters:', error);
+            // Fallback to dummy data in index.html if the API is offline
+            const dummyScript = document.getElementById('dummy-characters');
+            if (dummyScript) {
+                try {
+                    this.characters = JSON.parse(dummyScript.textContent);
+                    console.log('Loaded dummy characters as fallback');
+                } catch (e) {
+                    console.error('Failed to load dummy data fallback:', e);
+                }
+            }
         }
     }
 
@@ -46,8 +89,8 @@ class DataStore {
         return this.characters.filter(c => c.category === category);
     }
 
-    async addCharacter(name, category, photoUrl) {
-        const newChar = { name: name.trim(), category, photoUrl: photoUrl.trim() };
+    async addCharacter(name, category, photoUrl, labels = []) {
+        const newChar = { name: name.trim(), category, photoUrl: photoUrl.trim(), labels };
         
         const response = await fetch('/api/characters', {
             method: 'POST',
@@ -71,8 +114,8 @@ class DataStore {
         return result.character;
     }
 
-    async updateCharacter(id, name, category, photoUrl) {
-        const updateData = { id, name: name.trim(), category, photoUrl: photoUrl.trim() };
+    async updateCharacter(id, name, category, photoUrl, labels = []) {
+        const updateData = { id, name: name.trim(), category, photoUrl: photoUrl.trim(), labels };
         const response = await fetch('/api/characters', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -154,7 +197,8 @@ class DataStore {
                                     id: char.id || undefined,
                                     name: char.name.trim(),
                                     category: char.category,
-                                    photoUrl: char.photoUrl.trim()
+                                    photoUrl: char.photoUrl.trim(),
+                                    labels: Array.isArray(char.labels) ? char.labels : []
                                 })
                             });
                             
@@ -293,8 +337,7 @@ class GameEngine {
         if (roundsStr === 'Infinite') {
             this.state.maxRounds = Infinity;
         } else {
-            const requested = parseInt(roundsStr);
-            this.state.maxRounds = Math.min(requested, this.state.availablePool.length);
+            this.state.maxRounds = parseInt(roundsStr);
         }
 
         this.state.isActive = true;
@@ -306,13 +349,18 @@ class GameEngine {
     nextRound() {
         if (!this.state.isActive) return;
         
-        if (this.state.currentRound >= this.state.maxRounds || this.state.availablePool.length === 0) {
+        if (this.state.currentRound >= this.state.maxRounds) {
             this.endGame();
             return;
         }
 
         this.state.currentRound++;
         
+        // Refill pool if empty to allow rounds > characters
+        if (this.state.availablePool.length === 0) {
+            this.state.availablePool = [...this.state.fullPool].sort(() => Math.random() - 0.5);
+        }
+
         // Pick correct answer
         const correctChar = this.state.availablePool.pop();
         
@@ -346,11 +394,15 @@ class GameEngine {
             }
         } else {
             this.state.streak = 0;
-            this.state.mistakes.push({
-                image: this.state.currentQuestion.correct.photoUrl,
-                correctName: this.state.currentQuestion.correct.name,
-                wrongName: selectedChar ? selectedChar.name : "Unknown"
-            });
+            const existingMistake = this.state.mistakes.find(m => m.correctId === this.state.currentQuestion.correct.id);
+            if (!existingMistake) {
+                this.state.mistakes.push({
+                    correctId: this.state.currentQuestion.correct.id,
+                    image: this.state.currentQuestion.correct.photoUrl,
+                    correctName: this.state.currentQuestion.correct.name,
+                    wrongName: selectedChar ? selectedChar.name : "Unknown"
+                });
+            }
         }
 
         this.ui.updateGameStats(this.state);
@@ -381,6 +433,7 @@ class App {
         this.currentScreen = 'home';
         this.theme = localStorage.getItem('charquiz_theme') || 'dark';
         this.galleryFilter = 'All';
+        this.labelsFilter = 'All';
         this.gallerySearch = '';
         
         this.initDOM();
@@ -414,7 +467,8 @@ class App {
             manager: document.getElementById('managerModal'),
             edit: document.getElementById('editModal'),
             image: document.getElementById('imageModal'),
-            random: document.getElementById('randomModal')
+            random: document.getElementById('randomModal'),
+            labelsManager: document.getElementById('labelsManagerModal')
         };
         
         this.toastContainer = document.getElementById('toastContainer');
@@ -444,6 +498,29 @@ class App {
             });
         });
 
+        // Manage Labels Modal
+        const manageLabelsBtn = document.getElementById('manageLabelsBtn');
+        if (manageLabelsBtn) manageLabelsBtn.addEventListener('click', () => {
+            this.renderLabelsManager();
+            this.openModal('labelsManager');
+        });
+        document.getElementById('closeLabelsManagerModal').addEventListener('click', () => this.closeModal('labelsManager'));
+        document.getElementById('labelsManagerModalBackdrop').addEventListener('click', () => this.closeModal('labelsManager'));
+        
+        document.getElementById('addLabelForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('newLabelInput');
+            if (this.store.addLabel(input.value)) {
+                this.showToast('Label added');
+                input.value = '';
+                this.renderLabelsManager();
+                // refresh gallery labels if open
+                if (!this.screens.gallery.classList.contains('hidden')) this.renderGallery();
+            } else {
+                this.showToast('Invalid or duplicate label', 'error');
+            }
+        });
+
         // Sync Data Action
         const syncBtn = document.getElementById('syncBtn');
         if (syncBtn) {
@@ -469,13 +546,15 @@ class App {
             if (e.target.tagName === 'IMG' && 
                 !e.target.closest('#managerCharacterList') && 
                 !e.target.closest('.mistake-item') &&
-                e.target.id !== 'randomModalImage') {
+                e.target.id !== 'randomModalImage' &&
+                e.target.id !== 'globalModalImage') {
                 // Ensure it has a src
                 if (e.target.src) this.openImageModal(e.target.src);
             }
         });
         document.getElementById('closeImageModal').addEventListener('click', () => this.closeModal('image'));
         document.getElementById('imageModalBackdrop').addEventListener('click', () => this.closeModal('image'));
+        document.getElementById('globalModalImage').addEventListener('click', () => this.closeModal('image'));
 
         // Random Character Modal
         const handleRandomRoll = () => {
@@ -507,6 +586,7 @@ class App {
                     addCategorySelect.value = lastCategory;
                 }
             }
+            this.renderLabelSelector('addLabelsContainer', []);
             this.openModal('manager');
         });
         document.getElementById('closeManagerModal').addEventListener('click', () => this.closeModal('manager'));
@@ -515,6 +595,30 @@ class App {
         // Edit Modal
         document.getElementById('closeEditModal').addEventListener('click', () => this.closeModal('edit'));
         document.getElementById('editModalBackdrop').addEventListener('click', () => this.closeModal('edit'));
+
+        // Image Preview Buttons
+        const setupPreviewBtn = (inputId, btnId) => {
+            const input = document.getElementById(inputId);
+            const btn = document.getElementById(btnId);
+            if (input && btn) {
+                const updateLink = () => {
+                    if (input.value.trim()) {
+                        btn.href = input.value.trim();
+                    } else {
+                        btn.href = '#';
+                    }
+                };
+                input.addEventListener('input', updateLink);
+                btn.addEventListener('click', (e) => {
+                    if (!input.value.trim()) {
+                        e.preventDefault();
+                        this.showToast('Please enter an image URL first', 'error');
+                    }
+                });
+            }
+        };
+        setupPreviewBtn('addUrl', 'addUrlPreviewBtn');
+        setupPreviewBtn('editUrl', 'editUrlPreviewBtn');
 
         // CRUD Actions
         document.getElementById('addCharacterForm').addEventListener('submit', (e) => this.handleAddCharacter(e));
@@ -544,12 +648,23 @@ class App {
                 this.renderGallery();
             }
         });
+        document.getElementById('galleryLabelFilters').addEventListener('click', (e) => {
+            if (e.target.classList.contains('pill')) {
+                document.querySelectorAll('#galleryLabelFilters .pill').forEach(p => p.classList.remove('active'));
+                e.target.classList.add('active');
+                this.labelsFilter = e.target.dataset.label;
+                this.renderGallery();
+            }
+        });
 
         // Game Config
         document.getElementById('startGameBtn').addEventListener('click', () => {
             const roundsStr = document.querySelector('input[name="rounds"]:checked').value;
             const cat = document.getElementById('configCategoryTitle').dataset.category;
             this.game.start(cat, roundsStr);
+        });
+        document.getElementById('backFromConfigBtn').addEventListener('click', () => {
+            this.navigate('home');
         });
 
         // Gameplay
@@ -560,6 +675,12 @@ class App {
                 document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
                 this.game.handleAnswer(btn.dataset.id);
             }
+        });
+        document.getElementById('endGameBtn').addEventListener('click', () => {
+             // End the game instantly and go to results
+             if (this.game.state.isActive) {
+                 this.game.endGame();
+             }
         });
 
         // Results
@@ -648,11 +769,34 @@ class App {
 
     renderGallery() {
         const grid = document.getElementById('galleryGrid');
+        const filterContainer = document.getElementById('galleryLabelFilters');
         grid.innerHTML = '';
         
-        const chars = this.store.getCharacters(this.galleryFilter).filter(c => 
-            c.name.toLowerCase().includes(this.gallerySearch)
-        );
+        const allChars = this.store.getCharacters();
+        // Collect all unique labels
+        const uniqueLabels = new Set();
+        allChars.forEach(c => {
+            if (Array.isArray(c.labels)) {
+                c.labels.forEach(l => uniqueLabels.add(l));
+            }
+        });
+        
+        // Render Label Filter Pills
+        const sortedLabels = Array.from(uniqueLabels).sort();
+        let labelsHtml = `<button class="pill ${this.labelsFilter === 'All' ? 'active' : ''}" data-label="All">Any Label</button>`;
+        sortedLabels.forEach(label => {
+            labelsHtml += `<button class="pill ${this.labelsFilter === label ? 'active' : ''}" data-label="${label}">${label}</button>`;
+        });
+        filterContainer.innerHTML = labelsHtml;
+        // Hide container if there are no labels
+        filterContainer.style.display = sortedLabels.length > 0 ? 'flex' : 'none';
+
+        // Filter Characters
+        const chars = this.store.getCharacters(this.galleryFilter).filter(c => {
+            const matchesSearch = c.name.toLowerCase().includes(this.gallerySearch);
+            const matchesLabel = this.labelsFilter === 'All' || (Array.isArray(c.labels) && c.labels.includes(this.labelsFilter));
+            return matchesSearch && matchesLabel;
+        });
 
         if (chars.length === 0) {
             grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted)">No characters found.</p>`;
@@ -671,6 +815,8 @@ class App {
                 <div class="char-item-info">
                     <strong>${c.name}</strong>
                     <span>${c.category}</span>
+                    ${Array.isArray(c.labels) && c.labels.length > 0 ? 
+                        `<div class="char-item-labels">${c.labels.map(l => `<span class="char-label">${l}</span>`).join('')}</div>` : ''}
                 </div>
             `;
             grid.appendChild(item);
@@ -687,6 +833,8 @@ class App {
         document.getElementById('editCategory').value = char.category;
         document.getElementById('editUrl').value = char.photoUrl;
 
+        this.renderLabelSelector('editLabelsContainer', char.labels || []);
+
         this.openModal('edit');
     }
 
@@ -701,29 +849,19 @@ class App {
         title.textContent = `${category} Mode`;
         title.dataset.category = category;
         
-        // Disable round options if not enough characters
-        const maxAvailable = chars.length;
+        // Ensure all round options are enabled
         document.querySelectorAll('input[name="rounds"]').forEach(input => {
-            if (input.value !== 'Infinite') {
-                const val = parseInt(input.value);
-                if (val > maxAvailable) {
-                    input.disabled = true;
-                    input.parentElement.style.opacity = '0.5';
-                    input.parentElement.style.pointerEvents = 'none';
-                } else {
-                    input.disabled = false;
-                    input.parentElement.style.opacity = '1';
-                    input.parentElement.style.pointerEvents = 'auto';
-                }
-            }
+            input.disabled = false;
+            input.parentElement.style.opacity = '1';
+            input.parentElement.style.pointerEvents = 'auto';
         });
         
         // Auto select a logical default option
         const tenOption = document.querySelector('input[name="rounds"][value="10"]');
-        if (tenOption && !tenOption.disabled) {
+        if (tenOption) {
             tenOption.checked = true;
         } else {
-            const firstValid = document.querySelector('input[name="rounds"]:not(:disabled)');
+            const firstValid = document.querySelector('input[name="rounds"]');
             if (firstValid) firstValid.checked = true;
         }
 
@@ -805,6 +943,65 @@ class App {
         }
     }
 
+    renderLabelSelector(containerId, activeLabels) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        container.innerHTML = '';
+        const allLabels = this.store.customLabels;
+        
+        if (allLabels.length === 0) {
+            container.innerHTML = '<span style="font-size: 0.85rem; color: var(--text-muted);">No labels created. Manage them in Gallery.</span>';
+            return;
+        }
+
+        allLabels.forEach(label => {
+            const isChecked = activeLabels.includes(label);
+            const labelEl = document.createElement('label');
+            labelEl.className = 'label-cb-pill';
+            labelEl.innerHTML = `
+                <input type="checkbox" value="${label}" ${isChecked ? 'checked' : ''} style="display:none;">
+                <span>${label}</span>
+            `;
+            container.appendChild(labelEl);
+        });
+    }
+
+    renderLabelsManager() {
+        const list = document.getElementById('labelsManagerList');
+        if (!list) return;
+        
+        list.innerHTML = '';
+        const allLabels = this.store.customLabels;
+        
+        if (allLabels.length === 0) {
+            list.innerHTML = '<span style="color: var(--text-muted); text-align: center; display: block; padding: 1rem;">No labels yet.</span>';
+            return;
+        }
+
+        allLabels.forEach(label => {
+            const item = document.createElement('div');
+            item.className = 'label-manager-item';
+            item.innerHTML = `
+                <span>${label}</span>
+                <button class="char-action-btn delete" data-label="${label}" title="Delete Label" style="width: 25px; height: 25px; font-size: 0.8rem;">&times;</button>
+            `;
+            list.appendChild(item);
+        });
+
+        // Bind delete buttons
+        list.querySelectorAll('.delete').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const labelToDelete = e.target.dataset.label;
+                if (confirm(`Delete label "${labelToDelete}"? This will not remove it from characters who already have it, but you won't be able to select it anymore.`)) {
+                    this.store.deleteLabel(labelToDelete);
+                    this.renderLabelsManager();
+                    if (!this.screens.gallery.classList.contains('hidden')) this.renderGallery();
+                }
+            });
+        });
+    }
+
     // --- Action Handlers ---
 
     async handleAddCharacter(e) {
@@ -812,6 +1009,9 @@ class App {
         const name = document.getElementById('addName').value;
         const category = document.getElementById('addCategory').value;
         const url = document.getElementById('addUrl').value;
+        
+        const labels = Array.from(document.querySelectorAll('#addLabelsContainer input[type="checkbox"]:checked')).map(cb => cb.value);
+
         const submitBtn = e.target.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         
@@ -822,12 +1022,13 @@ class App {
         if (category) localStorage.setItem('charquiz_last_category', category);
         
         try {
-            await this.store.addCharacter(name, category, url);
+            await this.store.addCharacter(name, category, url, labelsRaw);
             this.renderGallery();
             this.renderHome();
             this.closeModal('manager');
             this.showToast('Character saved to KV safely!');
             e.target.reset();
+            document.getElementById('addUrlPreviewBtn').href = '#';
         } catch (err) {
             this.showToast(err.message, 'error');
         } finally {
@@ -842,6 +1043,9 @@ class App {
         const name = document.getElementById('editName').value;
         const category = document.getElementById('editCategory').value;
         const url = document.getElementById('editUrl').value;
+        
+        const labels = Array.from(document.querySelectorAll('#editLabelsContainer input[type="checkbox"]:checked')).map(cb => cb.value);
+
         const submitBtn = e.target.querySelector('button[type="submit"]');
         const originalText = submitBtn.textContent;
         
@@ -852,12 +1056,13 @@ class App {
         if (category) localStorage.setItem('charquiz_last_category', category);
         
         try {
-            await this.store.updateCharacter(id, name, category, url);
+            await this.store.updateCharacter(id, name, category, url, labelsRaw);
             this.renderGallery();
             this.renderHome();
             this.closeModal('edit');
             this.showToast('Character updated successfully!');
             e.target.reset();
+            document.getElementById('editUrlPreviewBtn').href = '#';
         } catch (err) {
             this.showToast(err.message, 'error');
         } finally {
