@@ -441,8 +441,41 @@ class App {
         this.applyTheme(this.theme);
         Confetti.init();
         
+        // Setup PIN Authentication
+        this.initAuth();
+        
         // Start Initialization flow
         this.initData();
+    }
+
+    initAuth() {
+        const PIN_CODE = "711424";
+        const pinModal = document.getElementById('pinModal');
+        const isAuth = localStorage.getItem('charquiz_authenticated');
+        const authTime = parseInt(localStorage.getItem('charquiz_auth_time') || '0', 10);
+        const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+        
+        if (isAuth !== 'true' || (Date.now() - authTime) > threeDaysMs) {
+            pinModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => document.getElementById('pinInput').focus(), 100);
+        }
+        
+        document.getElementById('pinForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('pinInput').value;
+            if (input === PIN_CODE) {
+                localStorage.setItem('charquiz_authenticated', 'true');
+                localStorage.setItem('charquiz_auth_time', Date.now().toString());
+                pinModal.classList.add('hidden');
+                document.getElementById('pinError').classList.add('hidden');
+                document.body.style.overflow = '';
+            } else {
+                document.getElementById('pinError').classList.remove('hidden');
+                document.getElementById('pinInput').value = '';
+                document.getElementById('pinInput').focus();
+            }
+        });
     }
 
     async initData() {
