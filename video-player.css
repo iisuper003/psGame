@@ -1,0 +1,280 @@
+/* Inherit variables from game theme conceptually, defining locally for portability */
+:root {
+    --bg-main: #0f172a;
+    --bg-card: #1e293b;
+    --bg-glass: rgba(30, 41, 59, 0.7);
+    --border-glass: rgba(255, 255, 255, 0.1);
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --secondary: #475569;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --transition: all 0.3s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; }
+body { background: var(--bg-main); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Mouse Idle State */
+body.mouse-idle { cursor: none !important; }
+body.mouse-idle .app-header,
+body.mouse-idle .video-metadata,
+body.mouse-idle .favorite-btn,
+body.mouse-idle .video-controls,
+body.mouse-idle .pan-slider {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.5s;
+}
+
+/* Utility Classes */
+.hidden { display: none !important; }
+
+/* Header Elements */
+.app-header {
+    height: 4rem;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    align-items: center;
+    background: linear-gradient(rgba(0,0,0,0.8), transparent);
+    border: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    opacity: 0.1;
+    transition: opacity 0.3s;
+}
+.app-header:hover {
+    opacity: 1;
+}
+.logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, var(--primary), #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display:flex; align-items:center; }
+.nav-btn { background: transparent; border: 1px solid var(--border-glass); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-weight: 500; transition: var(--transition); }
+.nav-btn:hover { background: var(--border-glass); }
+.nav-btn.active { background: var(--primary); border-color: var(--primary); }
+.layout-controls { display: flex; gap: 0.5rem; }
+.header-actions { display: flex; gap: 1rem; align-items: center; }
+.btn-primary { background: var(--primary); border: none; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: var(--transition); display:inline-block; }
+.btn-primary:focus, .btn-primary:hover { background: var(--primary-hover); outline: none; }
+.glass-card { background: var(--bg-glass); backdrop-filter: blur(16px); border: 1px solid var(--border-glass); border-radius: 12px; }
+
+/* Main Area */
+#playerMain { flex: 1; display: flex; position: relative; overflow: hidden; }
+
+/* Layout Grid Container */
+.layout-container {
+    flex: 1;
+    display: grid;
+    gap: 0;
+    padding: 0;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base structural setups for the main grid modes */
+.layout-container.mode-a { 
+    grid-template-columns: 1fr; 
+    grid-template-rows: 1fr; 
+}
+.layout-container.mode-a .video-window:nth-child(n+2) { display: none; }
+
+.layout-container.mode-b { 
+    grid-template-columns: 1fr 1fr; 
+    grid-template-rows: 1fr 1fr; 
+}
+.layout-container.mode-b .video-window:nth-child(n+5) { display: none; }
+
+.layout-container.mode-c { 
+    /* 56.25vh is exactly 9:16 aspect ratio width relative to 100vh */
+    grid-template-columns: 56.25vh 1fr; 
+    grid-template-rows: 1fr 1fr 1fr; 
+}
+.layout-container.mode-c .video-window:nth-child(1) { grid-column: 1 / 2; grid-row: 1 / 4; }
+.layout-container.mode-c .video-window:nth-child(2) { grid-column: 2 / 3; grid-row: 1 / 2; }
+.layout-container.mode-c .video-window:nth-child(3) { grid-column: 2 / 3; grid-row: 2 / 3; }
+.layout-container.mode-c .video-window:nth-child(4) { grid-column: 2 / 3; grid-row: 3 / 4; }
+.layout-container.mode-c .video-window:nth-child(n+5) { display: none; }
+
+.layout-container.mode-d { 
+    grid-template-columns: repeat(4, 1fr); 
+    grid-template-rows: 1fr; 
+}
+.layout-container.mode-d .video-window:nth-child(n+5) { display: none; }
+
+/* Video Window Container */
+.video-window {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+    box-shadow: none;
+    border-radius: 0 !important;
+    border: none !important;
+    transition: box-shadow 0.2s;
+}
+.video-window:focus { outline: none; }
+.video-window.focused { box-shadow: 0 0 0 2px var(--primary); }
+
+.video-window video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: object-position 0.1s linear;
+}
+
+/* Metadata & Controls Layer */
+.video-metadata {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background: rgba(0,0,0,0.6);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    z-index: 10;
+    pointer-events: none;
+    max-width: 60%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.video-index { color: var(--text-muted); margin-right: 0.25rem; }
+
+.favorite-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: #fff;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    font-size: 1rem;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    cursor: pointer;
+    z-index: 10;
+    transition: var(--transition);
+}
+.favorite-btn:hover { color: #fbbf24; transform: scale(1.1); }
+.favorite-btn.active { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+
+/* Custom Controls Details */
+.video-controls {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    padding: 2rem 0.5rem 0.5rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+    opacity: 0; transition: opacity 0.3s;
+    z-index: 10;
+}
+.video-window:hover .video-controls, .video-window.focused .video-controls { opacity: 1; }
+
+.progress-container { width: 100%; display: flex; }
+.controls-row { display: flex; align-items: center; gap: 0.75rem; }
+.control-btn { background: none; border: none; color: #fff; cursor: pointer; font-size: 1.1rem; padding: 0.25rem; transition: transform 0.1s, color 0.2s; }
+.control-btn:hover { transform: scale(1.1); color: var(--primary); }
+.control-btn.active { color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5); }
+.time-display { font-size: 0.8rem; flex-grow: 1; color: var(--text-main); font-family: monospace; }
+.volume-container { display: flex; align-items: center; gap: 0.25rem; }
+.volume-slider { width: 60px; }
+
+/* Sliders global style */
+input[type="range"] {
+    -webkit-appearance: none; background: transparent; width: 100%; cursor: pointer; outline: none;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px;
+}
+input[type="range"]::-webkit-slider-thumb {
+    height: 12px; width: 12px; border-radius: 50%; background: var(--primary); -webkit-appearance: none; margin-top: -4px;
+}
+input[type="range"]:focus::-webkit-slider-runnable-track { background: rgba(255,255,255,0.5); }
+
+/* Empty state */
+.empty-state {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    background: var(--bg-card); z-index: 5; color: var(--text-muted);
+}
+.video-window.has-video .empty-state { display: none; }
+
+/* Drag and Drop styling */
+.video-window.drag-over .empty-state {
+    background: var(--bg-glass); border-color: var(--primary); color: var(--primary);
+}
+
+/* Spatial Panning Sliders */
+.pan-slider {
+    position: absolute; z-index: 10; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+}
+.video-window:hover .pan-slider { opacity: 1; pointer-events: auto; }
+.video-window:not(.has-video) .pan-slider { display: none !important; }
+
+/* Horizontal Slider */
+.slider-horizontal { bottom: 4rem; left: 1rem; right: 1rem; width: auto; display: none; }
+/* Vertical Slider */
+.slider-vertical { 
+    top: 1rem; bottom: 4rem; right: 0.5rem; 
+    width: 4px !important; display: none; 
+    appearance: slider-vertical; -webkit-appearance: slider-vertical; 
+}
+/* Activate in Mode C */
+.layout-container.mode-c .video-window:nth-child(1) .slider-horizontal { display: block; }
+.layout-container.mode-c .video-window:nth-child(n+2):nth-child(-n+4) .slider-vertical { display: block; }
+
+/* Playlist Sidebar */
+.playlist-sidebar {
+    width: 300px; background: var(--bg-card); border-left: 1px solid var(--border-glass);
+    display: flex; flex-direction: column; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.playlist-sidebar.hidden { transform: translateX(100%); display: none; }
+.sidebar-header {
+    padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass);
+}
+.close-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+.playlist-items { flex: 1; overflow-y: auto; padding: 0.5rem; }
+.playlist-item {
+    background: var(--bg-glass); border: 1px solid var(--border-glass);
+    padding: 0.75rem; border-radius: 8px; margin-bottom: 0.5rem; cursor: grab;
+    display: flex; align-items: center; gap: 0.5rem; transition: var(--transition);
+}
+.playlist-item:active { cursor: grabbing; }
+.playlist-item:hover { background: var(--border-glass); }
+.playlist-item-index { font-size: 0.8rem; color: var(--text-muted); font-weight: bold; }
+.playlist-item-name { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }
+.playlist-item.playing { border-color: var(--primary); background: rgba(59, 130, 246, 0.1); }
+
+/* --- Mobile / Responsive Enhancements --- */
+@media (max-width: 768px) {
+    /* Hide layout togglers since mobile is locked to single view */
+    .layout-controls {
+        display: none !important;
+    }
+    
+    /* Force layout-container into single view (Mode A) behaviors */
+    .layout-container {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: 1fr !important;
+    }
+    
+    /* Hide all but the first video window */
+    .layout-container .video-window:nth-child(n+2) {
+        display: none !important;
+    }
+
+    /* Compact header actions for small screens */
+    .app-header {
+        padding: 0 1rem;
+        gap: 0.5rem;
+    }
+}

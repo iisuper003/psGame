@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Multi-View Video Player</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="video-player.css">
+</head>
+<body class="theme-dark">
+    <header class="app-header">
+        <div class="layout-controls">
+            <button class="nav-btn active" data-layout="mode-a" title="Single View">🔲</button>
+            <button class="nav-btn" data-layout="mode-b" title="2x2 Grid">田</button>
+            <button class="nav-btn" data-layout="mode-c" title="Asymmetric Split">◧</button>
+            <button class="nav-btn" data-layout="mode-d" title="Vertical Columns">▥</button>
+        </div>
+
+        <div class="header-actions">
+            <label class="btn-primary" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                <span>+ Upload</span>
+                <input type="file" id="videoUpload" multiple accept="video/*" class="hidden" style="display:none;">
+            </label>
+            <button class="nav-btn" id="togglePlaylistBtn">☰ Playlist (<span id="playlistCount">0</span>)</button>
+        </div>
+    </header>
+
+    <main id="playerMain">
+        <!-- Layout Container for the video windows -->
+        <div id="layoutContainer" class="layout-container mode-a">
+            <!-- Videos will be injected here dynamically -->
+        </div>
+
+        <!-- Playlist Sidebar -->
+        <aside id="playlistSidebar" class="playlist-sidebar hidden">
+            <div class="sidebar-header">
+                <h2>Playlist Queue</h2>
+                <button class="close-btn" id="closePlaylistBtn">&times;</button>
+            </div>
+            <div id="playlistContainer" class="playlist-items">
+                <!-- Uploaded files will be listed here -->
+                <p style="padding: 1rem; color: var(--text-muted); text-align: center;">No videos uploaded yet.</p>
+            </div>
+            <div style="padding: 1rem; border-top: 1px solid var(--border-glass);">
+                <p style="font-size: 0.8rem; color: var(--text-muted);">Instructions: Upload files, then drag them from the playlist to a video window.</p>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Template for a video window -->
+    <template id="videoWindowTemplate">
+        <div class="video-window" tabindex="0">
+            <!-- Metadata Label -->
+            <div class="video-metadata">
+                <span class="video-index"></span>
+                <span class="video-filename">No Video Selected</span>
+            </div>
+            
+            <!-- Favorite button -->
+            <button class="favorite-btn" title="Save JSON Shortcut">★</button>
+
+            <!-- Video element (unmuted by default, but script will manage independent volume) -->
+            <video class="main-video" playsinline></video>
+
+            <!-- Loading Spinner (hidden initially) -->
+            <div class="loading-spinner" style="display:none;"></div>
+
+            <!-- Custom Controls Overlay -->
+            <div class="video-controls">
+                <div class="progress-container">
+                    <input type="range" class="timeline-slider" min="0" max="100" value="0" step="0.1">
+                </div>
+                <div class="controls-row">
+                    <button class="prev-btn control-btn" title="Previous Video">⏮</button>
+                    <button class="play-pause-btn control-btn" title="Play/Pause (Space)">▶</button>
+                    <button class="next-btn control-btn" title="Next Video">⏭</button>
+                    <div class="time-display">
+                        <span class="time-current">0:00</span> / <span class="time-total">0:00</span>
+                    </div>
+                    
+                    <div class="volume-container">
+                        <button class="mute-btn control-btn" title="Mute/Unmute">🔊</button>
+                        <input type="range" class="volume-slider" min="0" max="1" value="1" step="0.05" title="Volume (Up/Down)">
+                    </div>
+
+                    <label class="control-btn" style="cursor: pointer; display: flex; align-items: center;" title="Add Videos to Player Playlist">
+                        📂
+                        <input type="file" class="local-upload-controls hidden" multiple accept="video/*" style="display:none;">
+                    </label>
+
+                    <button class="shuffle-btn control-btn" title="Toggle Smart Shuffle">🔀</button>
+
+                    <button class="fullscreen-window-btn control-btn" title="Fullscreen">⛶</button>
+                </div>
+            </div>
+
+            <!-- Spatial Panning Sliders (Only visible in Mode C via CSS) -->
+            <input type="range" class="pan-slider slider-horizontal" min="0" max="100" value="50" title="Pan Horizontal">
+            <input type="range" class="pan-slider slider-vertical" min="0" max="100" value="50" title="Pan Vertical" style="-webkit-appearance: slider-vertical;">
+            
+            <!-- Empty state overlay -->
+            <div class="empty-state">
+                <p>Drag video here or assign from playlist</p>
+                <div style="margin-top: 1rem;">
+                    <label class="btn-primary" style="cursor: pointer;">
+                        Browse Local Files
+                        <input type="file" class="local-upload-empty hidden" multiple accept="video/*" style="display:none;">
+                    </label>
+                </div>
+                <div class="assign-buttons" style="margin-top: 1rem; display: none;"></div>
+            </div>
+        </div>
+    </template>
+
+    <script src="video-player.js"></script>
+</body>
+</html>
