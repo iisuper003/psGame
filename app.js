@@ -1022,7 +1022,7 @@ class App {
         if (category) localStorage.setItem('charquiz_last_category', category);
         
         try {
-            await this.store.addCharacter(name, category, url, labelsRaw);
+            await this.store.addCharacter(name, category, url, labels);
             this.renderGallery();
             this.renderHome();
             this.closeModal('manager');
@@ -1056,7 +1056,7 @@ class App {
         if (category) localStorage.setItem('charquiz_last_category', category);
         
         try {
-            await this.store.updateCharacter(id, name, category, url, labelsRaw);
+            await this.store.updateCharacter(id, name, category, url, labels);
             this.renderGallery();
             this.renderHome();
             this.closeModal('edit');

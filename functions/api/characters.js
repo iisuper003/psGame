@@ -21,13 +21,16 @@ export async function onRequest(context) {
         }
 
         if (request.method === "POST") {
-            const newChar = await request.json();
+            const rawChar = await request.json();
             const data = (await kv.get(key, { type: "json" })) || [];
             
-            // Generate an ID if one isn't provided
-            if (!newChar.id) {
-                newChar.id = Date.now().toString() + Math.random().toString(36).substring(2);
-            }
+            const newChar = {
+                id: rawChar.id || Date.now().toString() + Math.random().toString(36).substring(2),
+                name: rawChar.name,
+                category: rawChar.category,
+                photoUrl: rawChar.photoUrl,
+                labels: Array.isArray(rawChar.labels) ? rawChar.labels : []
+            };
 
             data.push(newChar);
             await kv.put(key, JSON.stringify(data));
@@ -92,7 +95,13 @@ export async function onRequest(context) {
                 return new Response(JSON.stringify({ error: "Character not found" }), { status: 404 });
             }
             
-            data[charIndex] = { ...data[charIndex], ...updateData };
+            // Extract explicitly to ensure labels is always properly formatted as an array
+            const updatedChar = { ...data[charIndex], ...updateData };
+            if (!Array.isArray(updatedChar.labels)) {
+                updatedChar.labels = [];
+            }
+            
+            data[charIndex] = updatedChar;
             await kv.put(key, JSON.stringify(data));
             
             return new Response(JSON.stringify({ message: "Character updated successfully", character: data[charIndex] }), {
